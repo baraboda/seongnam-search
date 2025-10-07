@@ -1,0 +1,95 @@
+name: Update Algolia from Google Sheets
+on:
+  schedule:
+    - cron: '0 0,12 * * *'
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Update Algolia
+        env:
+          ALGOLIA_APP_ID: "X02D3JQ3LS"
+          ALGOLIA_ADMIN_KEY: "9796152cd8535860c759a6300d53c352"
+        run: |
+          curl -L "https://docs.google.com/spreadsheets/d/1jjzwbBbBKkrnJGkqQVzjQbDSD7DLe7005rQ2yB_YOmc/export?format=csv&gid=0" > data.csv
+          
+          npm init -y
+          npm install algoliasearch@4
+          
+          cat > update-algolia.js << 'EOF'
+          const algoliasearch = require('algoliasearch');
+          const fs = require('fs');
+          
+          async function updateAlgolia() {
+            const client = algoliasearch(
+              process.env.ALGOLIA_APP_ID,
+              process.env.ALGOLIA_ADMIN_KEY
+            );
+            const index = client.initIndex('gangwon');
+            
+            const fileContent = fs.readFileSync('data.csv', 'utf8');
+            const lines = fileContent.split('\n');
+            const headers = lines[0].split(',');
+            const records = [];
+            
+            console.log('헤더:', headers);
+            console.log('전체 줄 수:', lines.length);
+            
+            for (let i = 1; i < lines.length; i++) {
+              if (lines[i].trim()) {
+                const values = lines[i].split(',');
+                const record = {};
+                
+                headers.forEach((header, index) => {
+                  const cleanHeader = header.trim();
+                  record[cleanHeader] = values[index] ? values[index].trim() : '';
+                });
+                
+                if (record['카드번호']) {
+                  record.objectID = record['카드번호'] + '_' + records.length;
+                  records.push(record);
+                }
+              }
+            }
+            
+            console.log('파싱된 레코드 수:', records.length);
+            
+            if (records.length > 0) {
+              await index.clearObjects();
+              console.log('기존 데이터 삭제 완료');
+              
+              const batchSize = 100;
+              let totalUploaded = 0;
+              
+              for (let i = 0; i < records.length; i += batchSize) {
+                const batch = records.slice(i, i + batchSize);
+                try {
+                  await index.saveObjects(batch);
+                  totalUploaded += batch.length;
+                  console.log(`배치 ${Math.floor(i/batchSize) + 1}: ${batch.length}개 업로드`);
+                } catch (error) {
+                  console.error(`배치 실패:`, error);
+                }
+              }
+              
+              console.log(`✅ Algolia 업데이트 완료: 총 ${totalUploaded}개`);
+            }
+          }
+          
+          updateAlgolia().catch(error => {
+            console.error('실행 실패:', error);
+            process.exit(1);
+          });
+          EOF
+          
+          node update-algolia.js
