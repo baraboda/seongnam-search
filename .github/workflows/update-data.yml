@@ -18,8 +18,8 @@ jobs:
       
       - name: Update Algolia
         env:
-          ALGOLIA_APP_ID: "X02D3JQ3LS"
-          ALGOLIA_ADMIN_KEY: "9796152cd8535860c759a6300d53c352"
+          ALGOLIA_APP_ID: "${{ secrets.ALGOLIA_APP_ID }}"
+          ALGOLIA_ADMIN_KEY: "${{ secrets.ALGOLIA_ADMIN_KEY }}"
         run: |
           curl -L "https://docs.google.com/spreadsheets/d/1jjzwbBbBKkrnJGkqQVzjQbDSD7DLe7005rQ2yB_YOmc/export?format=csv&gid=0" > data.csv
           
@@ -35,7 +35,7 @@ jobs:
               process.env.ALGOLIA_APP_ID,
               process.env.ALGOLIA_ADMIN_KEY
             );
-            const index = client.initIndex('gangwon');
+            const index = client.initIndex('seongnam');
             
             const fileContent = fs.readFileSync('data.csv', 'utf8');
             const lines = fileContent.split('\n');
