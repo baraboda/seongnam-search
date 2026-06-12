@@ -316,6 +316,70 @@
             margin-left: 2px;
         }
         
+        /* ===== 심각도 필터 바 ===== */
+        .filter-bar {
+            background: rgba(255,255,255,0.95);
+            border-radius: 16px;
+            padding: 14px 20px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .filter-label {
+            font-weight: 700;
+            color: #333;
+            font-size: 0.95em;
+        }
+        .filter-pills {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .filter-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 999px;
+            border: 2px solid #ddd;
+            background: #fff;
+            color: #444;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.95em;
+            transition: all 0.2s;
+        }
+        .filter-pill:hover {
+            border-color: var(--primary-color);
+        }
+        .filter-pill-active {
+            background: var(--primary-color);
+            color: #fff;
+            border-color: var(--primary-color);
+        }
+        .filter-pill-critical {
+            border-color: var(--danger-color);
+            color: var(--danger-color);
+        }
+        .filter-pill-critical.filter-pill-active {
+            background: var(--danger-color);
+            color: #fff;
+            border-color: var(--danger-color);
+        }
+        .filter-count {
+            background: rgba(0,0,0,0.08);
+            border-radius: 999px;
+            padding: 1px 8px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        .filter-pill-active .filter-count {
+            background: rgba(255,255,255,0.25);
+        }
+        
         .ais-Pagination {
             display: flex;
             justify-content: center;
@@ -405,6 +469,11 @@
             <div id="searchbox"></div>
         </div>
         
+        <div class="filter-bar">
+            <span class="filter-label">심각도</span>
+            <div id="severity-filter" class="filter-pills"></div>
+        </div>
+        
         <div id="hits"></div>
         <div id="pagination"></div>
     </div>
@@ -439,6 +508,27 @@
             searchClient,
         });
 
+        // 심각도 필터 (커스텀 - 치명/일반 클릭 버튼)
+        const renderSeverityFilter = (renderOptions) => {
+            const { items, refine, widgetParams } = renderOptions;
+            const container = widgetParams.container;
+            if (items.length === 0) { container.innerHTML = ''; return; }
+            const ordered = [...items].sort((a, b) => {
+                if (a.label === b.label) return 0;
+                return a.label === '치명' ? -1 : 1;  // 치명 먼저
+            });
+            container.innerHTML = ordered.map(item => `
+                <button class="filter-pill ${item.isRefined ? 'filter-pill-active' : ''} ${item.label === '치명' ? 'filter-pill-critical' : ''}" data-value="${item.value}">
+                    ${item.label === '치명' ? '🎯 ' : ''}${item.label}
+                    <span class="filter-count">${item.count}</span>
+                </button>
+            `).join('');
+            container.querySelectorAll('button').forEach(btn => {
+                btn.onclick = () => refine(btn.dataset.value);
+            });
+        };
+        const severityFilter = instantsearch.connectors.connectRefinementList(renderSeverityFilter);
+
         search.addWidgets([
             instantsearch.widgets.searchBox({
                 container: '#searchbox',
@@ -454,6 +544,11 @@
                         {{#hasManyResults}}총 <strong>{{#helpers.formatNumber}}{{nbHits}}{{/helpers.formatNumber}}</strong>개 현황카드{{/hasManyResults}}
                     `,
                 },
+            }),
+            
+            severityFilter({
+                container: document.querySelector('#severity-filter'),
+                attribute: '심각도',
             }),
             
             instantsearch.widgets.hits({
