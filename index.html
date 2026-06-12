@@ -254,6 +254,67 @@
             border-radius: 10px;
             margin-bottom: 20px;
         }
+
+        /* ===== 치명 카드 강조 ===== */
+        .card-critical {
+            border: 2px solid var(--danger-color);
+            box-shadow: 0 12px 35px rgba(220, 38, 38, 0.3);
+        }
+
+        .card-critical .card-header {
+            background: linear-gradient(135deg, #dc2626 0%, #7c1d1d 100%);
+        }
+
+        .card-severity {
+            background: #fff;
+            color: var(--danger-color);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 800;
+            font-size: 0.9em;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* ===== 결정적 증거 블록 ===== */
+        .evidence-section {
+            background: #1f1f1f;
+            border-left: 4px solid var(--danger-color);
+            padding: 16px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .evidence-section .section-label {
+            color: #fca5a5;
+        }
+
+        .evidence-section .section-label::before {
+            background: var(--danger-color);
+        }
+
+        .evidence-quote {
+            color: #f5f5f5;
+            font-style: italic;
+            line-height: 1.7;
+            font-size: var(--text-size);
+            padding-left: 12px;
+        }
+
+        .evidence-quote::before {
+            content: '“';
+            font-size: 1.4em;
+            color: var(--danger-color);
+            margin-right: 2px;
+        }
+
+        .evidence-quote::after {
+            content: '”';
+            font-size: 1.4em;
+            color: var(--danger-color);
+            margin-left: 2px;
+        }
         
         .ais-Pagination {
             display: flex;
@@ -311,7 +372,8 @@
             }
             
             .problem-section,
-            .suggestion-section {
+            .suggestion-section,
+            .evidence-section {
                 padding: 10px;
             }
             
@@ -366,10 +428,10 @@
             }
         });
         
-        // Algolia 설정 - 강원도의회용으로 변경 필요
+        // Algolia 설정
         const searchClient = algoliasearch(
-            'X02D3JQ3LS',  // Algolia App ID 입력
-            '66df50144b6ff51f5e49324905c350ae'  // Algolia Search Key 입력
+            'X02D3JQ3LS',  // Algolia App ID
+            '66df50144b6ff51f5e49324905c350ae'  // Algolia Search Key
         );
 
         const search = instantsearch({
@@ -399,12 +461,13 @@
                 templates: {
                     item(hit) {
                         return `
-                            <div class="card">
+                            <div class="card ${hit.심각도 === '치명' ? 'card-critical' : ''}">
                                 <div class="card-header">
                                     <div class="card-meta">
                                         <span class="card-number">${hit.카드번호 || '-'}</span>
                                         <span class="card-category">${hit.분류 || '-'}</span>
                                         <span class="card-location">📍 ${hit.지역 || '-'}</span>
+                                        ${hit.심각도 === '치명' ? `<span class="card-severity">⚠️ 치명</span>` : ''}
                                     </div>
                                     <h3 class="card-title">${hit.현안제목 || '제목 없음'}</h3>
                                 </div>
@@ -428,6 +491,13 @@
                                     <div class="card-section">
                                         <div class="section-label">📢 답변사항</div>
                                         <div class="section-content">${hit.답변사항}</div>
+                                    </div>
+                                    ` : ''}
+                                    
+                                    ${(hit.결정적증거 || hit['결정적 증거']) ? `
+                                    <div class="evidence-section">
+                                        <div class="section-label">🎯 결정적 증거</div>
+                                        <div class="evidence-quote">${hit.결정적증거 || hit['결정적 증거']}</div>
                                     </div>
                                     ` : ''}
                                     
